@@ -1,0 +1,52 @@
+pipeline {
+    agent any
+    environment {   
+        REMOTE_HOST = 'ip'
+        REMOTE_USER = 'user1'
+        DB_NAME = 'test_db'
+    }
+    stages {
+        stage('SSH to Server and Create Tar') {
+            steps {
+                script {
+                    sshagent(credentials: ['kaif']) {
+                        withCredentials([usernamePassword(credentialsId: 'mysql', usernameVariable: 'DB_USERNAME', passwordVariable: 'DB_PASSWORD')]) {
+                            sh '''
+                               ssh -o StrictHostKeyChecking=no ${REMOTE_USER}@${REMOTE_HOST} \" 
+                               mysqldump -u \\"${DB_USERNAME}\\" -p\\"${DB_PASSWORD}\\" \\"${DB_NAME}\\" > "${DB_NAME}_$(date +%Y%m%d).sql" 
+                               \"
+                               '''
+                        }
+                    }
+                }
+            }
+        }
+        stage('SCP the Tar File') {
+            steps {
+                script {
+                    CURRENTDATE = sh(script: 'date +%Y%m%d', returnStdout: true).trim()
+                    TAR_FILE_NAME = "${DB_NAME}_${CURRENTDATE}.sql"
+                    sshagent(credentials: ['kaif']) {
+                        sh """
+                            scp -o StrictHostKeyChecking=no ${REMOTE_USER}@${REMOTE_HOST}:~/"${TAR_FILE_NAME}" "${WORKSPACE}"
+                        """
+                    }
+                }
+            }
+        }
+       
+    }
+    post {
+        always {
+            script {
+                CURRENTDATE = sh(script: 'date +%Y%m%d', returnStdout: true).trim()
+                    TAR_FILE_NAME = "${DB_NAME}_${CURRENTDATE}.sql"
+                archiveArtifacts artifacts: "${TAR_FILE_NAME}", allowEmptyArchive: true
+            }
+           	cleanWs()
+           		
+        }
+    }    
+    
+}
+
