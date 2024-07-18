@@ -1,0 +1,29 @@
+stages:
+   - build
+   - deploy
+
+variables:
+   CONTAINER_NAME: wordpress-container
+   TAG_COMMIT: $CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA
+   TAG_LATEST: $CI_REGISTRY_IMAGE:latest
+
+build:
+  image: docker:latest
+  stage: build
+  script:
+    - docker build -t $TAG_COMMIT -t $TAG_LATEST .
+    - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY
+    - docker push $TAG_COMMIT
+    - docker push $TAG_LATEST
+
+
+deploy_to_local:
+      stage: deploy
+      script:
+        - chmod og= $SSH_PRIVATE_KEY
+        - ssh -i $SSH_PRIVATE_KEY -o StrictHostKeyChecking=no $SSH_SERVER "docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY"
+        - ssh -i $SSH_PRIVATE_KEY -o StrictHostKeyChecking=no $SSH_SERVER "docker container rm -f $CONTAINER_NAME || true"
+        - ssh -i $SSH_PRIVATE_KEY -o StrictHostKeyChecking=no $SSH_SERVER "docker image rm -f $TAG_LATEST"
+        - ssh -i $SSH_PRIVATE_KEY -o StrictHostKeyChecking=no $SSH_SERVER "docker pull $TAG_LATEST"
+        - ssh -i $SSH_PRIVATE_KEY -o StrictHostKeyChecking=no $SSH_SERVER "docker run -d --name $CONTAINER_NAME -p 8000:80 $TAG_LATEST" 
+
