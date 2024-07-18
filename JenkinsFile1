@@ -1,0 +1,70 @@
+pipeline {
+    agent any
+    parameters {
+        string(name: 'FOLDERNAME', defaultValue: 'products.php', description: 'Folder name that you want to tar')
+    }
+    environment {   
+        REMOTE_HOST = 'ip'
+        REMOTE_USER = 'user'
+        BACKUP_DIRECTORY = '~/elk-agent'
+        REMOTE_DIRECTORY = "/var/www/html/${params.FOLDERNAME}"
+       
+    }
+    stages {
+        stage('SSH to Server and Create Tar') {
+            steps {
+                script {
+                    CURRENT_DATE = sh(script: 'date +%Y%m%d%H%M%S', returnStdout: true).trim()
+                    TAR_FILE_NAME = "${params.FOLDERNAME}_${CURRENT_DATE}.tar.gz"
+                    TAR_FILE_PATH = "${BACKUP_DIRECTORY}/${TAR_FILE_NAME}"
+                    sshagent(credentials: ['kaif']) {
+                        withCredentials([usernamePassword(credentialsId: 'password', usernameVariable: 'SUDO_USER', passwordVariable: 'SUDO_PASSWORD')]) {
+                            sh """
+                                # SSH to the server and run commands
+                                ssh -o StrictHostKeyChecking=no ${REMOTE_USER}@${REMOTE_HOST} bash -c \"
+                                    echo \\"${SUDO_PASSWORD}\\" | sudo -S tar -czvf ${TAR_FILE_PATH} ${REMOTE_DIRECTORY}
+                                    echo \\"Tar command executed\\"
+                                \"
+                            """
+                        }
+                    }
+                }
+            }
+        }
+        stage('find products.php backups older then 7 days') {
+          steps {
+              sshagent(credentials: ['kaif']) {
+                        withCredentials([usernamePassword(credentialsId: 'password', usernameVariable: 'SUDO_USER', passwordVariable: 'SUDO_PASSWORD')]) {
+                            sh """
+                                ssh -o StrictHostKeyChecking=no ${REMOTE_USER}@${REMOTE_HOST} \" 
+                                 echo \\"${SUDO_PASSWORD}\\" | sudo -S find ~/elk-agent -name "products.php*" -type f -mtime +0 -exec rm -rf {} \\;
+                                \"  
+                              """
+                        }
+                    }
+            
+                }
+            }
+        stage('SCP the Tar File') {
+            steps {
+                script {
+                    sshagent(credentials: ['kaif']) {
+                        sh """
+                            scp -o StrictHostKeyChecking=no ${REMOTE_USER}@${REMOTE_HOST}:${TAR_FILE_PATH} ${WORKSPACE}/
+                        """
+                    }
+                }
+            }
+        }
+    }
+    post {
+        always {
+            script {
+                CURRENT_DATE = sh(script: 'date +%Y%m%d', returnStdout: true).trim()
+                TAR_FILE_NAME = "${params.FOLDERNAME}_${CURRENT_DATE}*"
+                archiveArtifacts artifacts: "${TAR_FILE_NAME}", allowEmptyArchive: true
+                cleanWs()
+            }		
+        }
+    }
+}
