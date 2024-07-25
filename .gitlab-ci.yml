@@ -42,7 +42,7 @@ role_back:
     - ssh -i $SSH_PRIVATE_KEY -o StrictHostKeyChecking=no $SSH_SERVER "docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY"
     - ssh -i $SSH_PRIVATE_KEY -o StrictHostKeyChecking=no $SSH_SERVER "docker pull $TAG_ROLLBACK:$FIRST_EIGHT"
     - ssh -i $SSH_PRIVATE_KEY -o StrictHostKeyChecking=no $SSH_SERVER "docker container rm -f $CONTAINER_NAME || true"
-    - ssh -i $SSH_PRIVATE_KEY -o StrictHostKeyChecking=no $SSH_SERVER "docker images -q $CI_REGISTRY_IMAGE | grep -v $(docker images -q $TAG_ROLLBACK:$FIRST_EIGHT) | xargs --no-run-if-empty docker rmi -f"
+    - ssh -i $SSH_PRIVATE_KEY -o StrictHostKeyChecking=no $SSH_SERVER "docker images --format '{{.ID}} {{.Repository}}:{{.Tag}}' | grep '$CI_REGISTRY_IMAGE' | grep -v '$TAG_ROLLBACK:$FIRST_EIGHT' | awk '{print \$1}' | xargs --no-run-if-empty docker rmi -f"
     - ssh -i $SSH_PRIVATE_KEY -o StrictHostKeyChecking=no $SSH_SERVER "docker run --name $CONTAINER_NAME -d -p 3000:3000 $TAG_ROLLBACK:$FIRST_EIGHT"
 
     #  - ssh -i $SSH_PRIVATE_KEY -o StrictHostKeyChecking=no $SSH_SERVER "docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY"
@@ -59,6 +59,5 @@ role_back:
     #- ssh -i $SSH_PRIVATE_KEY -o StrictHostKeyChecking=no $SSH_SERVER "docker container prune -f"
     #- ssh -i $SSH_PRIVATE_KEY -o StrictHostKeyChecking=no $SSH_SERVER "docker images -q $CI_REGISTRY_IMAGE | grep -v $(docker images -q $TAG_COMMIT) | xargs --no-run-if-empty docker rmi -f"
   
-
 
 
