@@ -29,4 +29,6 @@ resource 'aws_ec2' 'myec2' {
     Tags = {
         Name = var.instances[count.index]
     }
+    user_data = file("${path.module}/script.sh")
+
 }
