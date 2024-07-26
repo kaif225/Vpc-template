@@ -1,0 +1,61 @@
+stages:
+  - build
+  - container_scan
+  - deploy
+
+variables:
+  CONTAINER_NAME: node-app 
+  TAG_COMMIT: $CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA
+  TAG_LATEST: $CI_REGISTRY_IMAGE:latest
+#  TAG_ROLLBACK: $CI_REGISTRY_IMAGE 
+  FIRST_EIGHT: $(echo "$CI_COMMIT_BEFORE_SHA" | cut -c 1-8)
+build:
+  image: docker:latest
+  stage: build
+  script:
+    - docker build -t $TAG_COMMIT -t $TAG_LATEST .
+    - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY
+    - docker push $TAG_COMMIT
+#    - docker push $TAG_LATEST
+
+#test:
+ # image: docker:latest
+ # stage: container_scan
+ # script:
+ #    - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY
+ #    - docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy image $TAG_COMMIT
+deploy_to_local:
+  stage: deploy
+  script:
+    - chmod og= $SSH_PRIVATE_KEY
+    - ssh -i $SSH_PRIVATE_KEY -o StrictHostKeyChecking=no $SSH_SERVER "docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY"
+    - ssh -i $SSH_PRIVATE_KEY -o StrictHostKeyChecking=no $SSH_SERVER "docker pull $TAG_COMMIT"
+    - ssh -i $SSH_PRIVATE_KEY -o StrictHostKeyChecking=no $SSH_SERVER "docker container rm -f $CONTAINER_NAME || true"
+    - ssh -i $SSH_PRIVATE_KEY -o StrictHostKeyChecking=no $SSH_SERVER "docker images -q $CI_REGISTRY_IMAGE | grep -v $(docker images -q $TAG_COMMIT) | xargs --no-run-if-empty docker rmi -f"
+    - ssh -i $SSH_PRIVATE_KEY -o StrictHostKeyChecking=no $SSH_SERVER "docker run --name $CONTAINER_NAME -d -p 3000:3000 $TAG_COMMIT"
+
+role_back:
+  stage: deploy
+  when: manual
+  script:
+    - chmod og= $SSH_PRIVATE_KEY
+    - ssh -i $SSH_PRIVATE_KEY -o StrictHostKeyChecking=no $SSH_SERVER "docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY"
+    - ssh -i $SSH_PRIVATE_KEY -o StrictHostKeyChecking=no $SSH_SERVER "docker container rm -f $CONTAINER_NAME || true"
+    - ssh -i $SSH_PRIVATE_KEY -o StrictHostKeyChecking=no $SSH_SERVER "docker images --format '{{.ID}} {{.Repository}}:{{.Tag}}' | grep '$CI_REGISTRY_IMAGE' | grep -v '$CI_REGISTRY_IMAGE:7865cf45' | xargs --no-run-if-empty docker rmi -f"
+    - ssh -i $SSH_PRIVATE_KEY -o StrictHostKeyChecking=no $SSH_SERVER "docker pull $CI_REGISTRY_IMAGE:$FIRST_EIGHT"
+    - ssh -i $SSH_PRIVATE_KEY -o StrictHostKeyChecking=no $SSH_SERVER "docker run --name $CONTAINER_NAME -d -p 3000:3000 $CI_REGISTRY_IMAGE:$FIRST_EIGHT"
+
+    #  - ssh -i $SSH_PRIVATE_KEY -o StrictHostKeyChecking=no $SSH_SERVER "docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY"
+    #- ssh -i $SSH_PRIVATE_KEY -o StrictHostKeyChecking=no $SSH_SERVER "docker service rm  $SERVICE_NAME || true"
+    #- ssh -i $SSH_PRIVATE_KEY -o StrictHostKeyChecking=no $SSH_SERVER "docker service create --name $SERVICE_NAME -p 3000-3001:3000  --replicas 2 $TAG_COMMIT"
+    #- ssh -i $SSH_PRIVATE_KEY -o StrictHostKeyChecking=no $SSH_SERVER "TAG=\$(docker image ls gitlab.focalworks.in:5050/kaif.usmani/nodejs --format 'table {{.Tag}}\t{{.CreatedAt}}' | sort -k 3 --reverse | sed -n '3p' | awk '{print \$1}'); export TAG"
+   # - ssh -i $SSH_PRIVATE_KEY -o StrictHostKeyChecking=no $SSH_SERVER "TAG=\$(docker image ls gitlab.focalworks.in:5050/kaif.usmani/nodejs --format 'table {{.Tag}}\t{{.CreatedAt}}' | sort -k 3 --reverse | sed -n '3p' | awk '{print \$1}'); docker run --name $CONTAINER_NAME -p 3000:3000 -d $CI_REGISTRY_IMAGE:\$TAG"
+
+    #- ssh -i $SSH_PRIVATE_KEY -o StrictHostKeyChecking=no $SSH_SERVER "docker run --name $CONTAINER_NAME -p 3000:3000 -d $CI_REGISTRY_IMAGE:\$TAG"
+
+    
+
+    #- ssh -i $SSH_PRIVATE_KEY -o StrictHostKeyChecking=no $SSH_SERVER "docker service update --image $TAG_COMMIT $SERVICE_NAME"
+    #- ssh -i $SSH_PRIVATE_KEY -o StrictHostKeyChecking=no $SSH_SERVER "docker container prune -f"
+    #- ssh -i $SSH_PRIVATE_KEY -o StrictHostKeyChecking=no $SSH_SERVER "docker images -q $CI_REGISTRY_IMAGE | grep -v $(docker images -q $TAG_COMMIT) | xargs --no-run-if-empty docker rmi -f"
+
