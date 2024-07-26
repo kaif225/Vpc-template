@@ -1,0 +1,41 @@
+CREATE ROLE 'readonly_role';
+
+GRANT SELECT ON test_db.Customers TO 'readonly_role';
+
+GRANT SELECT ON test_db.Persons TO 'readonly_role';
+
+create user 'user1'@'localhost' identified by 'user1';
+
+GRANT 'readonly_role' TO 'user1'@'localhost';
+
+create user 'user2'@'localhost' identified by 'user2';
+
+GRANT 'readonly_role' TO 'user2'@'localhost';
+
+
+SET DEFAULT ROLE 'readonly_role' FOR 'user1'@'localhost';
+
+SET DEFAULT ROLE 'readonly_role' TO 'user2'@'localhost';
+
+------------------------------------------------------------------------------------------
+create user 'user3'@'localhost' identified by 'user3';
+
+create role 'readonly';
+
+GRANT SELECT ON test_db.* TO 'readonly';
+
+GRANT 'readonly' TO 'user3'@'localhost';
+
+SET DEFAULT ROLE 'readonly' TO 'user3'@'localhost';
+
+
+REVOKE SELECT ON test_db.products FROM 'readonly';
+
+-----------------------------------------------------------------------
+
+grant a role to all users at a time 
+
+USE mysql;
+SELECT CONCAT('GRANT \'readonly\' TO \'', user, '\'@\'', host, '\';') 
+FROM mysql.user 
+WHERE user NOT IN ('mysql.session', 'mysql.sys', 'root');
