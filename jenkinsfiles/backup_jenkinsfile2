@@ -1,0 +1,77 @@
+pipeline {
+    agent any
+    environment {   
+       REMOTE_HOST = ''
+       REMOTE_USER = ''
+        DB_NAME = 'harmonie_dev'
+    }
+    stages {
+        stage('SSH to Server and take harmonie_dev database backup') {
+            steps {
+        script {
+            sshagent(credentials: ['password']) {  // SSH credentials
+                    withCredentials([usernamePassword(credentialsId: 'mysql', usernameVariable: 'DB_USERNAME', passwordVariable: 'DB_PASSWORD')]) {
+                        sh '''
+                               ssh -o StrictHostKeyChecking=no ${REMOTE_USER}@${REMOTE_HOST} \" 
+                               mysqldump -u \\"${DB_USERNAME}\\" -p\\"${DB_PASSWORD}\\" \\"${DB_NAME}\\" > "${DB_NAME}_$(date +%Y%m%d).sql" 
+                               \"
+                               '''
+                    }
+                }
+            }
+        }
+    }
+       stage('move the backup to /media/DATA/BACKUP/harmonie-dev') {
+          steps {
+            script {
+                 sshagent(credentials: ['password']) {  // SSH credentials
+                     withCredentials([usernamePassword(credentialsId: 'webdev2', usernameVariable: 'SUDO_USER', passwordVariable: 'SUDO_PASSWORD')]) {
+                         sh '''
+                            ssh -o StrictHostKeyChecking=no ${REMOTE_USER}@${REMOTE_HOST} "echo '${SUDO_PASSWORD}' | sudo -S mv ~/harmonie_dev* /media/DATA/Backup/harmonie-dev"
+                            '''
+                }
+            }
+        }
+    }
+} 
+        stage('Find backups older than 7 days') {
+          steps {
+            script {
+                 sshagent(credentials: ['password']) {  // SSH credentials
+                     withCredentials([usernamePassword(credentialsId: 'webdev2', usernameVariable: 'SUDO_USER', passwordVariable: 'SUDO_PASSWORD')]) {
+                         sh '''
+                            ssh -o StrictHostKeyChecking=no ${REMOTE_USER}@${REMOTE_HOST} "echo '${SUDO_PASSWORD}' | sudo -S find /media/DATA/Backup/harmonie-dev -name "harmonie_dev*.sql" -type f -mtime +5 -delete"
+                            '''
+                }
+            }
+        }
+    }
+}
+        stage('move todays backup to jenkins workspace') {
+            steps {
+                script {
+                    CURRENTDATE = sh(script: 'date +%Y%m%d', returnStdout: true).trim()
+                    TAR_FILE_NAME = "${DB_NAME}_${CURRENTDATE}.sql"
+                    sshagent(credentials: ['password']) {
+                        sh """
+                            scp -o StrictHostKeyChecking=no ${REMOTE_USER}@${REMOTE_HOST}:/media/DATA/Backup/harmonie-dev/"${TAR_FILE_NAME}" "${WORKSPACE}"
+                        """
+                    }
+                }
+            }
+        }
+       
+    }
+    post {
+        always {
+            script {
+                CURRENTDATE = sh(script: 'date +%Y%m%d', returnStdout: true).trim()
+                    TAR_FILE_NAME = "${DB_NAME}_${CURRENTDATE}.sql"
+                archiveArtifacts artifacts: "${TAR_FILE_NAME}", allowEmptyArchive: true
+            }
+           	cleanWs()
+           		
+        }
+    }    
+    
+}

@@ -1,0 +1,62 @@
+pipeline {
+    agent any
+    environment {   
+        REMOTE_HOST = ''
+        REMOTE_USER = ''
+    }
+    stages {
+        stage('SSH to Server and Create Tar file of harmonie-dev folder') {
+        steps {
+            script {
+                sshagent(credentials: ['password']) {
+                    withCredentials([usernamePassword(credentialsId: 'webdev2', usernameVariable: 'REMOTE_USER', passwordVariable: 'SUDO_PASSWORD')]) {
+                        sh '''
+                            ssh -o StrictHostKeyChecking=no ${REMOTE_USER}@${REMOTE_HOST} "cd /var/www/html && echo '${SUDO_PASSWORD}' | sudo -S tar -czf /media/DATA/Backup/harmonie-dev/harmonie-dev_$(date +%Y%m%d%H%M%S).tar.gz harmonie-dev"
+                            '''
+                    }
+                }
+            }
+        }
+    }
+     stage('find harmonie-dev backups older then 7 days and delete them') {
+          steps {
+            script {
+                 sshagent(credentials: ['password']) {  // SSH credentials
+                     withCredentials([usernamePassword(credentialsId: 'webdev2', usernameVariable: 'SUDO_USER', passwordVariable: 'SUDO_PASSWORD')]) {
+                         sh '''
+                            ssh -o StrictHostKeyChecking=no ${REMOTE_USER}@${REMOTE_HOST} "echo '${SUDO_PASSWORD}' | sudo -S find /media/DATA/Backup/harmonie-dev -name "harmonie-dev*" -type f -mtime +5 -delete"
+                            '''
+                }
+            }
+        }
+    }
+}
+        stage('SCP the Tar File to jenkins workspace') {
+            steps {
+                script {
+                    CURRENTDATE = sh(script: 'date +%Y%m%d', returnStdout: true).trim()
+                    TAR_FILE_NAME = "harmonie-dev_${CURRENTDATE}*.tar.gz"
+                    sshagent(credentials: ['password']) {
+                        sh """
+                            scp -o StrictHostKeyChecking=no ${REMOTE_USER}@${REMOTE_HOST}:/media/DATA/Backup/harmonie-dev/"${TAR_FILE_NAME}" "${WORKSPACE}"
+                        """
+                    }
+                }
+            }
+        }
+       
+    }
+    post {
+        always {
+            script {
+                CURRENTDATE = sh(script: 'date +%Y%m%d', returnStdout: true).trim()
+                TAR_FILE_NAME = "harmonie-dev_${CURRENTDATE}*.tar.gz"
+                archiveArtifacts artifacts: "${TAR_FILE_NAME}", allowEmptyArchive: true
+            }
+           	cleanWs()
+           		
+        }
+    }    
+    
+}
+
