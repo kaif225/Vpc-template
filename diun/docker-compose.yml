@@ -1,0 +1,12 @@
+services:
+  diun:
+      image: crazymax/diun:4.28.0
+      container_name: diun
+      command: serve
+      restart: unless-stopped
+      hostname: kaif-H81M-S1
+      env_file:
+        - .env_diun
+      volumes:
+        - "./data:/data"
+        - "/var/run/docker.sock:/var/run/docker.sock"
