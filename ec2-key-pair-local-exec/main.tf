@@ -95,3 +95,5 @@ provider "aws" {
 
      timeout     = "4m"
 
+   }
+ }

@@ -1,6 +1,6 @@
 variable "region" {
     type = string
-    default = 'use-east-1'
+    default = "use-east-1"
 }
 
 variable "instances" {
