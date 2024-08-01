@@ -10,7 +10,7 @@ resource "aws_security_group" "dynamic-sg" {
     }
 }
 
-// if we want to use different blocks for different cidr then we have to do the below, it will create a map that set cidr_block for each ports so that we have different cidr ofr different ports in a security group
+// if we want to use different ports for different cidr then we have to do the below, it will create a map that set cidr_block for each ports so that we have different cidr ofr different ports in a security group
 
 
 variable "cidr_blocks" {
