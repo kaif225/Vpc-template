@@ -1,5 +1,5 @@
-// here we will setup state locking using s3 and dynamodb table so that if multiple users a working on a same terraform code and one from then has run terraform plan then the outher user should not be able to do the same
-// before this we must create a s3 bucket and dynamodb table 
+// here we will setup state locking using s3 and dynamodb table so that if multiple users a working on a same terraform code and one from them has run terraform plan then the outher user should not be able to do the same
+// before running the below code we have have a s3 bucket and a dynamodb table configured  
 
 terraform {
   backend "s3" {
