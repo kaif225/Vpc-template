@@ -1,0 +1,17 @@
+version: '3.7'
+
+services:
+  app:
+    image: node-cron:latest
+    deploy:
+      replicas: 3
+    depends_on:
+      - redis
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+
+  redis:
+    image: redis:latest
+    deploy:
+      replicas: 1

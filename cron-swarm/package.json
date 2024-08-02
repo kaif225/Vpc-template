@@ -1,0 +1,12 @@
+{
+  "name": "node-hello-world1",
+  "version": "1.0.0",
+  "description": "A simple Node.js 'Hello World' application",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "author": "Kaif Usmani",
+  "license": "ISC"
+}
+
