@@ -24,7 +24,7 @@ resource "aws_security_group" "my_sg" {
 
 resource "aws_ec2" "myec2" {
     instance_type = var.instance-type
-    ami = ""
+    ami = data.aws_ami.ubuntu.id
     vpc_security_group_id = [aws_security_group.my_sg.id]
     count = length(var.instances)
     tags = {
