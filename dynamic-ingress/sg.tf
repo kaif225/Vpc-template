@@ -43,3 +43,33 @@ resource "aws_security_group" "dynamic-sg" {
     }
   }
 }
+////////////////////////////////////////////////////////////////////////////////////
+
+locals {
+    map = {
+      "http rule" = {
+        port = 80
+        cidr_block = ["0.0.0.0/0"]
+      }
+      "ssh port" = {
+        port = 22
+        cidr_block = ["192.168.21.0/20"]
+      }
+    }
+}
+
+resource "aws_security_group" "my_group" {
+   dynamic "ingress" {
+     for_each = locals.map
+     content {
+        description = ingress.key
+        from_port = ingress.value.port
+        to_port = ingress.value.port
+        cidr_blocks = ingress.value.cidr_block
+     }
+   }
+}
+
+output "map" {
+  value = aws_security_group.foreachusecase
+}
