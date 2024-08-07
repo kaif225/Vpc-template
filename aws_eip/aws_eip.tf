@@ -8,8 +8,8 @@ resource "aws_instance" "demo_instance" {
 }
 
 resource "aws_eip_association" "demo_eip_ass" {
-    instance_id = aws_instance.demo_instance
-    allocation_id = aws_eip.demo_eip
+    instance_id = aws_instance.demo_instance.id
+    allocation_id = aws_eip.demo_eip.id
 }
 
 
