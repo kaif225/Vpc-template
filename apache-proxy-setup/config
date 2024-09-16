@@ -1,0 +1,15 @@
+In apache.conf  file change 
+
+             <Directory /var/www/>
+        Options Indexes FollowSymLinks
+        AllowOverride None
+        Require all granted
+      </Directory>
+             
+              to
+
+<Directory /var/www/>
+        Options -Indexes 
+        AllowOverride All
+        Require all granted
+</Directory>

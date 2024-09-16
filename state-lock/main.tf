@@ -11,7 +11,7 @@ terraform {
   }
 }
 
-// the above part will save the lock whenever a user do terraform apply and after all the resources get created the lock will get remove
+// the above part will save the lock whenever a user do terraform apply sss
 
 provider "aws" {
   region = "us-west-2"

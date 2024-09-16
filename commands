@@ -2,3 +2,5 @@ docker image ls image_repository --format '{{.ID}} {{.Tag}} {{.CreatedAt}}'   | 
 
 
 sysctl -w vm.max_map_count=262144
+
+useradd -m -s /bin/bash username
