@@ -15,7 +15,7 @@ Resources:
           ToPort: 22
           CidrIp: 0.0.0.0/0
   Ec2Instance:
-    Type: AWS::EC2::Intance
+    Type: AWS::EC2::Instance
     Properties:
       ImageId:
       InstanceType: t2.micro
@@ -24,3 +24,17 @@ Resources:
       Tags:
         - Key: Name
           Value: test-instance
+
+
+
+
+
+ 
+APP_NAME=Trualta
+APP_ENV=testing
+APP_KEY=base64:tASSfOYHmfkhN7Zv4z5b7L3yJ756ofcuoqP4qmLfyVw=
+APP_DEBUG=true
+APP_LOG_LEVEL=debug 
+APP_URL=http://trualta.localhost 
+CUSTOM_ENCRYPTER_KEY=base64:JNH3sQXZH7jN3W3sBRB7+qIFRzBa+5YZuvsOzWUCV4Y=
+DB_CONNECTION=sqlite

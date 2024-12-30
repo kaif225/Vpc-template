@@ -73,3 +73,29 @@ resource "aws_security_group" "my_group" {
 output "map" {
   value = aws_security_group.foreachusecase
 }
+
+
+/*
+
+locals {
+   ingress_rule = [{
+     port = 443
+     },
+    { 
+    port = 80
+     }
+   ]
+  }
+
+  resource "aws_security_group" "web_sg" {
+    name = ""
+    vpc_id =
+    dynamic "ingress" {
+      for_each = local.ingress_rule
+      port = ingress.value
+    }
+  }
+
+
+
+*/
